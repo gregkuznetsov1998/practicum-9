@@ -27,10 +27,8 @@ type ReportData struct {
 }
 
 func initStorage() error {
-	// Инициализация ClickHouse
 	var err error
 
-	// Формируем DSN для ClickHouse
 	dsn := "clickhouse://clickhouse_user:clickhouse_password@clickhouse:9000/reports?dial_timeout=10s&compress=true"
 
 	clickhouseDB, err = sql.Open("clickhouse", dsn)
@@ -38,7 +36,6 @@ func initStorage() error {
 		return fmt.Errorf("failed to connect to ClickHouse: %v", err)
 	}
 
-	// Проверяем соединение с ClickHouse
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -46,7 +43,6 @@ func initStorage() error {
 		return fmt.Errorf("failed to ping ClickHouse: %v", err)
 	}
 
-	// Инициализация MinIO
 	minioClient, err = minio.New("minio:9000", &minio.Options{
 		Creds:  credentials.NewStaticV4("minioadmin", "minioadmin", ""),
 		Secure: false,
@@ -55,7 +51,6 @@ func initStorage() error {
 		return fmt.Errorf("failed to create MinIO client: %v", err)
 	}
 
-	// Создание bucket в MinIO если не существует
 	bucketCtx, bucketCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer bucketCancel()
 
@@ -139,18 +134,14 @@ func handleReports(w http.ResponseWriter, r *http.Request) {
 		sessionsMux.RUnlock()
 	}
 
-	// Декодируем JWT токен для получения информации о пользователе
 	userInfo, err := decodeJWTToken(session.AccessToken)
 	if err != nil {
 		http.Error(w, "Failed to decode user token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Используем контекст из запроса
 	ctx := r.Context()
 
-	// Проверяем наличие отчета в MinIO
-	// Используем preferred_username как идентификатор пользователя
 	objectName := fmt.Sprintf("%s/report.csv", userInfo.Username)
 	existsInMinIO, err := checkReportExists(ctx, objectName)
 	if err != nil {
@@ -159,7 +150,6 @@ func handleReports(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if existsInMinIO {
-		// Отчет существует - возвращаем ссылку
 		reportURL := fmt.Sprintf("http://localhost/reports/%s/report.csv", userInfo.Username)
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
@@ -170,22 +160,18 @@ func handleReports(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Отчет не существует - генерируем новый
-	// Используем preferred_username для поиска в ClickHouse
 	reportData, err := generateReport(ctx, userInfo.Username)
 	if err != nil {
 		http.Error(w, "Error generating report: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Сохраняем отчет в MinIO
 	err = saveReportToMinIO(ctx, objectName, reportData)
 	if err != nil {
 		http.Error(w, "Error saving report: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Возвращаем ссылку на отчет
 	reportURL := fmt.Sprintf("http://localhost/reports/%s/report.csv", userInfo.Username)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
@@ -195,15 +181,12 @@ func handleReports(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// decodeJWTToken декодирует JWT токен и извлекает информацию о пользователе
 func decodeJWTToken(accessToken string) (*UserInfo, error) {
-	// JWT токен состоит из трех частей: header.payload.signature
 	parts := strings.Split(accessToken, ".")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("invalid JWT token format, got %d parts", len(parts))
 	}
 
-	// Декодируем payload (вторая часть)
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode JWT payload: %v", err)
@@ -214,7 +197,6 @@ func decodeJWTToken(accessToken string) (*UserInfo, error) {
 		return nil, fmt.Errorf("failed to unmarshal JWT payload: %v", err)
 	}
 
-	// Создаем упрощенную структуру пользователя
 	userInfo := &UserInfo{
 		Username: tokenPayload.PreferredUsername,
 		Email:    tokenPayload.Email,
@@ -222,7 +204,6 @@ func decodeJWTToken(accessToken string) (*UserInfo, error) {
 		Name:     tokenPayload.Name,
 	}
 
-	// Логируем для отладки
 	fmt.Printf("Decoded user info: %s (preferred_username), %s (email), %s (sub)\n",
 		userInfo.Username, userInfo.Email, userInfo.UserID)
 
@@ -241,8 +222,6 @@ func checkReportExists(ctx context.Context, objectName string) (bool, error) {
 }
 
 func generateReport(ctx context.Context, username string) (string, error) {
-	// Запрос к витрине данных в ClickHouse
-	// Используем preferred_username как user_id для поиска
 	query := `
 		SELECT 
 			user_id,
@@ -268,7 +247,6 @@ func generateReport(ctx context.Context, username string) (string, error) {
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Если данных нет, создаем пустой отчет
 			fmt.Printf("No data found for user: %s, creating empty report\n", username)
 			report = ReportData{
 				UserID:       username,
@@ -281,7 +259,6 @@ func generateReport(ctx context.Context, username string) (string, error) {
 		}
 	}
 
-	// Генерация CSV
 	var csvBuilder strings.Builder
 	writer := csv.NewWriter(&csvBuilder)
 
@@ -314,7 +291,6 @@ func generateReport(ctx context.Context, username string) (string, error) {
 func saveReportToMinIO(ctx context.Context, objectName, reportData string) error {
 	reader := strings.NewReader(reportData)
 
-	// Сохраняем объект в bucket "reports" с указанным именем
 	_, err := minioClient.PutObject(ctx, "reports", objectName, reader, int64(len(reportData)), minio.PutObjectOptions{
 		ContentType: "text/csv",
 	})

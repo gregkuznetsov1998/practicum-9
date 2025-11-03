@@ -37,7 +37,6 @@ type PKCESession struct {
 	State        string
 }
 
-// JWTTokenPayload - структура для декодирования JWT токена
 type JWTTokenPayload struct {
 	Exp               int64          `json:"exp"`
 	Iat               int64          `json:"iat"`
@@ -74,7 +73,6 @@ type Account struct {
 	Roles []string `json:"roles"`
 }
 
-// UserInfo - упрощенная структура пользователя
 type UserInfo struct {
 	Username string `json:"preferred_username"`
 	Email    string `json:"email"`
@@ -89,13 +87,11 @@ var (
 	pceSessionsMux sync.RWMutex
 	encryptionKey  = []byte("12345678901234567890123456789012")
 
-	// Глобальные переменные для хранилищ
 	clickhouseDB *sql.DB
 	minioClient  *minio.Client
 )
 
 func main() {
-	// Инициализация хранилищ
 	if err := initStorage(); err != nil {
 		fmt.Printf("Failed to initialize storage: %v\n", err)
 		return
@@ -119,7 +115,6 @@ func main() {
 		}
 	}
 
-	// Apply CORS middleware to all handlers
 	http.HandleFunc("/auth/login", corsMiddleware(handleLogin))
 	http.HandleFunc("/auth/callback", corsMiddleware(handleCallback))
 	http.HandleFunc("/auth/refresh", corsMiddleware(handleRefresh))

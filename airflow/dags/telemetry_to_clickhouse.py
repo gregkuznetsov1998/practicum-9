@@ -30,7 +30,7 @@ def transfer_telemetry_data():
         cursor = conn.cursor()
         
         # Выборка данных
-        query = "SELECT * FROM telemetry_data LIMIT 10"
+        query = "SELECT * FROM telemetry_data"
         cursor.execute(query)
         rows = cursor.fetchall()
         
