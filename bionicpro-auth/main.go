@@ -5,6 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	_ "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/minio/minio-go/v7"
 )
 
 type TokenResponse struct {
@@ -33,15 +37,70 @@ type PKCESession struct {
 	State        string
 }
 
+// JWTTokenPayload - структура для декодирования JWT токена
+type JWTTokenPayload struct {
+	Exp               int64          `json:"exp"`
+	Iat               int64          `json:"iat"`
+	AuthTime          int64          `json:"auth_time"`
+	Jti               string         `json:"jti"`
+	Iss               string         `json:"iss"`
+	Aud               string         `json:"aud"`
+	Sub               string         `json:"sub"`
+	Typ               string         `json:"typ"`
+	Azp               string         `json:"azp"`
+	Sid               string         `json:"sid"`
+	Acr               string         `json:"acr"`
+	AllowedOrigins    []string       `json:"allowed-origins"`
+	RealmAccess       RealmAccess    `json:"realm_access"`
+	ResourceAccess    ResourceAccess `json:"resource_access"`
+	Scope             string         `json:"scope"`
+	EmailVerified     bool           `json:"email_verified"`
+	Name              string         `json:"name"`
+	PreferredUsername string         `json:"preferred_username"`
+	GivenName         string         `json:"given_name"`
+	FamilyName        string         `json:"family_name"`
+	Email             string         `json:"email"`
+}
+
+type RealmAccess struct {
+	Roles []string `json:"roles"`
+}
+
+type ResourceAccess struct {
+	Account Account `json:"account"`
+}
+
+type Account struct {
+	Roles []string `json:"roles"`
+}
+
+// UserInfo - упрощенная структура пользователя
+type UserInfo struct {
+	Username string `json:"preferred_username"`
+	Email    string `json:"email"`
+	UserID   string `json:"sub"`
+	Name     string `json:"name"`
+}
+
 var (
 	sessions       = make(map[string]*Session)
 	sessionsMux    sync.RWMutex
 	pceSessions    = make(map[string]*PKCESession)
 	pceSessionsMux sync.RWMutex
 	encryptionKey  = []byte("12345678901234567890123456789012")
+
+	// Глобальные переменные для хранилищ
+	clickhouseDB *sql.DB
+	minioClient  *minio.Client
 )
 
 func main() {
+	// Инициализация хранилищ
+	if err := initStorage(); err != nil {
+		fmt.Printf("Failed to initialize storage: %v\n", err)
+		return
+	}
+
 	// CORS middleware
 	corsMiddleware := func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -198,52 +257,6 @@ func exchangeCodeForTokens(code, codeVerifier string) (*TokenResponse, error) {
 	}
 
 	return &tokens, nil
-}
-
-func handleReports(w http.ResponseWriter, r *http.Request) {
-	sessionCookie, err := r.Cookie("session_id")
-	if err != nil {
-		http.Error(w, "Unauthorized - no session", http.StatusUnauthorized)
-		return
-	}
-
-	sessionsMux.RLock()
-	session, exists := sessions[sessionCookie.Value]
-	sessionsMux.RUnlock()
-
-	if !exists {
-		http.Error(w, "Session not found", http.StatusUnauthorized)
-		return
-	}
-
-	if time.Now().After(session.ExpiresAt) {
-		newSessionID, err := refreshTokens(sessionCookie.Value, session)
-		if err != nil {
-			http.Error(w, "Token refresh failed: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		http.SetCookie(w, &http.Cookie{
-			Name:     "session_id",
-			Value:    newSessionID,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   false,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   3600,
-		})
-
-		sessionsMux.RLock()
-		session = sessions[newSessionID]
-		sessionsMux.RUnlock()
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Report data would be here",
-		"status":  "success",
-		"user":    "authenticated",
-	})
 }
 
 func handleRefresh(w http.ResponseWriter, r *http.Request) {

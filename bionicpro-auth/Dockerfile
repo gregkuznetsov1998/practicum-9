@@ -1,12 +1,17 @@
-FROM golang:1.21-alpine
+FROM golang:1.24-alpine
 
 WORKDIR /app
 
-COPY go.mod ./
+# Копируем файлы зависимостей
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Копируем исходный код
 COPY *.go ./
 
-RUN go build -o bionicpro-auth
+# Собираем приложение
+RUN go build -o /bionicpro-auth
 
 EXPOSE 8000
 
-CMD ["./bionicpro-auth"]
+CMD ["/bionicpro-auth"]

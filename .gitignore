@@ -4,3 +4,11 @@
 /ldap/config
 /ldap/data
 /ldap/ldap_users.ldif
+/postgres-telemetry-data
+/postgres-crm-data
+/minio
+/nginx/cache
+/clickhouse
+/airflow/postgres-data
+/kafka/data
+__pycache__

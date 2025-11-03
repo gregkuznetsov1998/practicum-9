@@ -26,7 +26,7 @@ const ReportPage: React.FC = () => {
       // Обработка успешного ответа
       const data = await response.json();
       console.log('Report data:', data);
-      
+      window.open(data.report_url, "_blank")
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
