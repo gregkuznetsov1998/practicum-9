@@ -1,0 +1,120 @@
+dn: ou=users,dc=bionicpro,dc=local
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=bionicpro,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+dn: ou=branches,dc=bionicpro,dc=local
+objectClass: organizationalUnit
+ou: branches
+
+# Пользователи
+dn: cn=user1,ou=users,dc=bionicpro,dc=local
+objectClass: inetOrgPerson
+cn: user1
+sn: UserOne
+givenName: User
+uid: user1
+userPassword: password123
+mail: user1@example.com
+employeeType: regular
+departmentNumber: MSK001
+
+dn: cn=user2,ou=users,dc=bionicpro,dc=local
+objectClass: inetOrgPerson
+cn: user2
+sn: UserTwo
+givenName: User
+uid: user2
+userPassword: password123
+mail: user2@example.com
+employeeType: regular
+departmentNumber: MSK002
+
+dn: cn=admin1,ou=users,dc=bionicpro,dc=local
+objectClass: inetOrgPerson
+cn: admin1
+sn: AdminOne
+givenName: Admin
+uid: admin1
+userPassword: admin123
+mail: admin1@example.com
+employeeType: administrator
+departmentNumber: MSK001
+
+dn: cn=prothetic1,ou=users,dc=bionicpro,dc=local
+objectClass: inetOrgPerson
+cn: prothetic1
+sn: ProtheticOne
+givenName: Prothetic
+uid: prothetic1
+userPassword: prothetic123
+mail: prothetic1@example.com
+employeeType: prothetic
+departmentNumber: SPB001
+
+dn: cn=prothetic2,ou=users,dc=bionicpro,dc=local
+objectClass: inetOrgPerson
+cn: prothetic2
+sn: ProtheticTwo
+givenName: Prothetic
+uid: prothetic2
+userPassword: prothetic123
+mail: prothetic2@example.com
+employeeType: prothetic
+departmentNumber: SPB002
+
+dn: cn=prothetic3,ou=users,dc=bionicpro,dc=local
+objectClass: inetOrgPerson
+cn: prothetic3
+sn: ProtheticThree
+givenName: Prothetic
+uid: prothetic3
+userPassword: prothetic123
+mail: prothetic3@example.com
+employeeType: prothetic
+departmentNumber: EKB001
+
+# Группы ролей
+dn: cn=users,ou=groups,dc=bionicpro,dc=local
+objectClass: groupOfNames
+cn: users
+description: Regular users group
+member: cn=user1,ou=users,dc=bionicpro,dc=local
+
+dn: cn=administrators,ou=groups,dc=bionicpro,dc=local
+objectClass: groupOfNames
+cn: administrators
+description: Administrators group
+member: cn=admin1,ou=users,dc=bionicpro,dc=local
+
+dn: cn=prothetic_users,ou=groups,dc=bionicpro,dc=local
+objectClass: groupOfNames
+cn: prothetic_users
+description: Prothetic users group
+member: cn=prothetic1,ou=users,dc=bionicpro,dc=local
+member: cn=prothetic2,ou=users,dc=bionicpro,dc=local
+member: cn=prothetic3,ou=users,dc=bionicpro,dc=local
+
+# Представительства BionicPRO
+dn: cn=moscow_branch,ou=branches,dc=bionicpro,dc=local
+objectClass: groupOfNames
+cn: moscow_branch
+description: Moscow branch users
+member: cn=user1,ou=users,dc=bionicpro,dc=local
+member: cn=admin1,ou=users,dc=bionicpro,dc=local
+
+dn: cn=spb_branch,ou=branches,dc=bionicpro,dc=local
+objectClass: groupOfNames
+cn: spb_branch
+description: Saint Petersburg branch users
+member: cn=prothetic1,ou=users,dc=bionicpro,dc=local
+member: cn=prothetic2,ou=users,dc=bionicpro,dc=local
+
+dn: cn=ekb_branch,ou=branches,dc=bionicpro,dc=local
+objectClass: groupOfNames
+cn: ekb_branch
+description: Ekaterinburg branch users
+member: cn=prothetic3,ou=users,dc=bionicpro,dc=local
