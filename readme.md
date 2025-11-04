@@ -33,7 +33,7 @@ docker compose up -d --build
 
 ## Процесс логина:
 
-1. UnAuthorized при попытке скачать отчет без логина ([обработка в go сервисе](./bionicpro-auth/report_handler.go)), будет редирект на keycloak
+1. UnAuthorized при попытке скачать отчет без логина ([обработка в go сервисе](./bionicpro-auth/report_handler.go) handleReports), будет редирект на keycloak
 
 ![401](./screenshots/401.png)
 
